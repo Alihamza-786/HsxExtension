@@ -8,7 +8,8 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 CORS(app)  # This allows all domains; you can restrict if needed
-nlp = spacy.load("en_core_web_trf")  # Transformer-based model for accurate NER
+nlp = spacy.load("en_core_web_sm")
+#nlp = spacy.load("en_core_web_trf")  # Transformer-based model for accurate NER
 
 # Improved regex for structured address detection
 ADDRESS_PATTERN = r'(\d{1,5}[A-Za-z]?\s*[A-Za-z0-9\s,-]+(?:Road|Street|Block|Town|Industrial Estate|Markaz|Near|Phase|Sector|Chowk|Plaza).*\b(?:Lahore|Karachi|Islamabad|Sialkot)\b)'
