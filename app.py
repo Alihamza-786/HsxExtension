@@ -1,54 +1,44 @@
-#pip install -r requirements.txt
-#spaCy version: 3.8.4
-#Flask version: 3.0.3
+import spacy
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import spacy 
-import re
-from flask import Flask, request, jsonify 
+from transformers import pipeline
 
+# Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # This allows all domains; you can restrict if needed
+CORS(app)
+
+# Load spaCy model for NER (Named Entity Recognition)
 nlp = spacy.load("en_core_web_sm")
-#nlp = spacy.load("en_core_web_trf")  # Transformer-based model for accurate NER
 
-# Improved regex for structured address detection
-ADDRESS_PATTERN = r'(\d{1,5}[A-Za-z]?\s*[A-Za-z0-9\s,-]+(?:Road|Street|Block|Town|Industrial Estate|Markaz|Near|Phase|Sector|Chowk|Plaza).*\b(?:Lahore|Karachi|Islamabad|Sialkot)\b)'
+# Alternatively, use a HuggingFace NER model for address extraction
+address_extraction_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 
-# List of valid Pakistani cities for filtering
-VALID_CITIES = {"Lahore", "Karachi", "Islamabad", "Sialkot"}
-
-def extract_addresses_from_text(text):
-    """Extract addresses using regex pattern."""
-    return set(match.strip() for match in re.findall(ADDRESS_PATTERN, text, re.IGNORECASE))
-
-def extract_locations_using_ner(text):
-    """Extract city-specific locations using spaCy's NER and filter out unrelated places."""
+# Function to extract addresses using spaCy
+def extract_addresses_spacy(text):
     doc = nlp(text)
-    extracted_locations = set()
-
+    addresses = []
     for ent in doc.ents:
-        if ent.label_ == "GPE":  # Geopolitical Entity
-            location = ent.text.title()  # Capitalize properly
-            if location in VALID_CITIES:  # Only consider relevant cities
-                extracted_locations.add(location)
+        if ent.label_ == "GPE" or ent.label_ == "LOC":
+            addresses.append(ent.text)
+    return addresses
 
-    return extracted_locations
-
-@app.route('/extract_addresses', methods=['POST'])
+# Flask route to extract addresses
+@app.route("/extract-addresses", methods=["POST"])
 def extract_addresses():
-    """API endpoint to extract addresses from text."""
-    data = request.json
+    data = request.get_json()
     text = data.get("text", "")
     
-    # Extract addresses using regex
-    addresses = extract_addresses_from_text(text)
-    
-    # Extract locations using NER
-    locations = extract_locations_using_ner(text)
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
 
-    # Merge results
-    extracted_data = addresses | locations  # Union of both sets
-    return jsonify(list(extracted_data))
+    # Extract addresses using both models
+    addresses_spacy = extract_addresses_spacy(text)
 
-if __name__ == '__main__':
-    app.run(port=5000)
+    # Combine and remove duplicates
+    extracted_data = list(set(addresses_spacy))
+
+    return jsonify(extracted_data)
+
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
