@@ -1,7 +1,6 @@
 import spacy
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from transformers import pipeline
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -9,9 +8,6 @@ CORS(app)
 
 # Load spaCy model for NER (Named Entity Recognition)
 nlp = spacy.load("en_core_web_sm")
-
-# Alternatively, use a HuggingFace NER model for address extraction
-address_extraction_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 
 # Function to extract addresses using spaCy
 def extract_addresses_spacy(text):
